@@ -1,9 +1,11 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
+import { useToastStore } from "./ToastStore";
 
 const InvoiceContext = createContext();
 
 export function InvoiceProvider({ children }) {
+  const { showToast } = useToastStore();
   const [items, setItems] = useState([]);
 
   // Load invoice items from localStorage
@@ -41,7 +43,10 @@ export function InvoiceProvider({ children }) {
         .filter((i) => i.qty > 0)
     );
 
-  const clearInvoice = () => setItems([]);
+  const clearInvoice = () => {
+    showToast("Invoice cleared", "info");
+    setItems([]);
+  };
 
   const completeOrder = () => {
     if (items.length === 0) return;
@@ -60,6 +65,7 @@ export function InvoiceProvider({ children }) {
     });
 
     localStorage.setItem("orders", JSON.stringify(orders));
+    showToast("Order completed successfully", "success");
     setItems([]);
     localStorage.removeItem("invoice");
   };

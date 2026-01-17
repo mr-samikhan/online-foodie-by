@@ -19,12 +19,25 @@ export function useMenu() {
     localStorage.setItem("menu", JSON.stringify(updated));
   };
 
+  // Add a new category
   const addCategory = (name) => {
+    if (!name) return;
+    if (menu[name]) return; // category already exists
     const updated = { ...menu, [name]: {} };
     saveMenu(updated);
   };
 
+  // Delete a category
+  const deleteCategory = (name) => {
+    if (!menu[name]) return;
+    const updated = { ...menu };
+    delete updated[name];
+    saveMenu(updated);
+  };
+
+  // Add a new item to a category
   const addItem = (cat, item, price) => {
+    if (!cat || !item || price == null) return;
     const updated = {
       ...menu,
       [cat]: {
@@ -35,5 +48,13 @@ export function useMenu() {
     saveMenu(updated);
   };
 
-  return { menu, addCategory, addItem };
+  // Delete an item from a category
+  const deleteItem = (cat, item) => {
+    if (!menu[cat] || !menu[cat][item]) return;
+    const updated = { ...menu, [cat]: { ...menu[cat] } };
+    delete updated[cat][item];
+    saveMenu(updated);
+  };
+
+  return { menu, addCategory, addItem, deleteCategory, deleteItem };
 }

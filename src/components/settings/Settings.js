@@ -1,6 +1,6 @@
 "use client";
 import { useAuth } from "@/store/AuthContext";
-import UserManager from "./UserManager";
+// import UserManager from "./UserManager";
 import MenuEditor from "./MenuEditor";
 
 export default function Settings() {
@@ -13,7 +13,7 @@ export default function Settings() {
   return (
     <>
       <MenuEditor />
-      <UserManager />
+      {/* <UserManager /> */}
     </>
   );
 }

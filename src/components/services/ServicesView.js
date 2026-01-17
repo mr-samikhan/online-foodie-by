@@ -1,52 +1,3 @@
-// import { useMenu } from "@/hooks/useMenu";
-// import { useInvoice } from "@/store/InvoiceContext";
-// import { useState } from "react";
-
-// export default function ServicesView() {
-//   const { menu } = useMenu();
-//   const { addItem } = useInvoice();
-//   const [selectedCat, setSelectedCat] = useState(null);
-
-//   return (
-//     <div className="flex h-full">
-//       {/* Categories */}
-//       <div className="w-1/2 border-r p-4">
-//         <h3 className="font-bold mb-3">Categories</h3>
-//         {Object.keys(menu).map((cat) => (
-//           <div
-//             key={cat}
-//             onClick={() => setSelectedCat(cat)}
-//             className="p-3 bg-gray-100 mb-2 cursor-pointer"
-//           >
-//             {cat}
-//           </div>
-//         ))}
-//       </div>
-
-//       {/* Items */}
-//       <div className="w-1/2 p-4">
-//         <h3 className="font-bold mb-3">{selectedCat}</h3>
-
-//         {selectedCat &&
-//           Object.entries(menu[selectedCat]).map(([item, price]) => (
-//             <div
-//               key={item}
-//               onClick={() =>
-//                 addItem({
-//                   name: `${selectedCat} - ${item}`,
-//                   price,
-//                 })
-//               }
-//               className="p-3 bg-green-100 mb-2 cursor-pointer flex justify-between"
-//             >
-//               <span>{item}</span>
-//               <span>Rs {price}</span>
-//             </div>
-//           ))}
-//       </div>
-//     </div>
-//   );
-// }
 "use client";
 import { useMenu } from "@/hooks/useMenu";
 import { useInvoice } from "@/store/InvoiceContext";
@@ -67,17 +18,17 @@ export default function ServicesView() {
   const [search, setSearch] = useState("");
 
   return (
-    <div className="flex h-full bg-gray-50 rounded-lg overflow-hidden shadow">
+    <div className="flex flex-col md:flex-row h-full min-h-0 bg-gray-50 rounded-lg overflow-hidden shadow">
       {/* Categories */}
-      <div className="w-1/3 bg-white p-4 border-r">
-        <h3 className="font-bold text-lg mb-4">🍽 Categories</h3>
+      <div className="md:w-1/3 bg-white p-4 border-b md:border-b-0 md:border-r overflow-x-auto">
+        <h3 className="font-bold text-lg mb-3">🍽 Categories</h3>
 
-        <div className="space-y-2">
+        <div className="flex md:flex-col gap-2">
           {Object.keys(menu).map((cat) => (
             <div
               key={cat}
               onClick={() => setSelectedCat(cat)}
-              className={`p-3 rounded-lg cursor-pointer flex justify-between items-center transition
+              className={`p-3 rounded-lg cursor-pointer flex justify-between items-center transition min-w-[140px]
                 ${
                   selectedCat === cat
                     ? "bg-green-600 text-white shadow"
@@ -94,9 +45,9 @@ export default function ServicesView() {
         </div>
       </div>
 
-      {/* Items */}
-      <div className="w-2/3 p-6">
-        <div className="flex justify-between items-center mb-4">
+      {/* Items (Scrollable) */}
+      <div className="flex-1 p-4 md:w-2/3 overflow-y-auto">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
           <h3 className="font-bold text-xl">
             {selectedCat ? `🍛 ${selectedCat}` : "Select a category"}
           </h3>
@@ -104,14 +55,14 @@ export default function ServicesView() {
           <input
             type="text"
             placeholder="Search item..."
-            className="border px-3 py-2 rounded-lg w-1/2"
+            className="border px-3 py-2 rounded-lg w-full sm:w-1/2"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
         {selectedCat && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {Object.entries(menu[selectedCat])
               .filter(([item]) =>
                 item.toLowerCase().includes(search.toLowerCase())

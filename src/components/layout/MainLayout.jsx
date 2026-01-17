@@ -1,18 +1,9 @@
 "use client";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
-import InvoicePanel from "@/components/invoice/InvoicePanel";
-import { useAuth } from "@/store/AuthContext";
-import LoginScreen from "@/components/auth/LoginScreen";
-import LoaderScreen from "@/components/common/LoaderScreen";
-import Toast from "@/components/common/Toast";
+import MobileNav from "./MobileNav";
 
 export default function MainLayout({ children }) {
-  const { user, loading } = useAuth();
-
-  if (loading) return <LoaderScreen />;
-  if (!user) return <LoginScreen />;
-
   return (
     <div className="h-screen flex flex-col">
       {/* Header */}
@@ -20,20 +11,19 @@ export default function MainLayout({ children }) {
 
       {/* Body */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <Sidebar />
+        {/* Sidebar (Desktop only) */}
+        <div className="hidden md:block w-60 border-r bg-white">
+          <Sidebar />
+        </div>
 
-        {/* Main Content (Route renders here) */}
-        <main className="flex-1 bg-gray-100 p-4 overflow-auto relative">
+        {/* Main Content */}
+        <main className="flex-1 bg-gray-100 p-3 md:p-4 overflow-auto">
           {children}
         </main>
-
-        {/* Cart / Invoice */}
-        <InvoicePanel />
       </div>
 
-      {/* Toast notifications */}
-      <Toast />
+      {/* Mobile Bottom Navigation */}
+      <MobileNav />
     </div>
   );
 }

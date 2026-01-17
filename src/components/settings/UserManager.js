@@ -2,11 +2,20 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/store/AuthContext";
 import bcrypt from "bcryptjs";
+import { useToastStore } from "@/store/ToastStore";
 
-const ALL_PERMISSIONS = ["dashboard", "services", "settings", "orders"];
+const ALL_PERMISSIONS = [
+  "dashboard",
+  "services",
+  "settings",
+  "orders",
+  "users",
+];
 
 export default function UserManager() {
   const { user: currentUser, setUser: setAuthUser } = useAuth();
+  const { showToast } = useToastStore();
+
   const [users, setUsers] = useState([]);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -31,12 +40,12 @@ export default function UserManager() {
   };
 
   const addOrUpdateUser = () => {
-    if (!username || (!password && !editingId)) return;
+    if (!username || (!password && !editingId))
+      return showToast("Fill required fields", "error");
 
     const hashedPassword = password ? bcrypt.hashSync(password, 10) : null;
 
     if (editingId) {
-      // Update existing user
       const updatedUsers = users.map((u) =>
         u.id === editingId
           ? {
@@ -51,16 +60,15 @@ export default function UserManager() {
 
       saveUsers(updatedUsers);
 
-      // If the currently logged-in user was updated, update auth context too
       if (currentUser?.id === editingId) {
         const updatedCurrentUser = updatedUsers.find((u) => u.id === editingId);
         localStorage.setItem("user", JSON.stringify(updatedCurrentUser));
         setAuthUser(updatedCurrentUser);
       }
 
+      showToast("User updated successfully", "success");
       setEditingId(null);
     } else {
-      // Add new user
       const newUser = {
         id: Date.now().toString(),
         username,
@@ -69,9 +77,9 @@ export default function UserManager() {
         permissions,
       };
       saveUsers([...users, newUser]);
+      showToast("User added successfully", "success");
     }
 
-    // Reset form
     setUsername("");
     setPassword("");
     setRole("cashier");
@@ -81,13 +89,10 @@ export default function UserManager() {
   const deleteUser = (id) => {
     saveUsers(users.filter((u) => u.id !== id));
 
-    // If deleting current user, log them out
-    if (currentUser?.id === id) {
-      localStorage.removeItem("user");
-      setAuthUser(null);
-    }
-
+    if (currentUser?.id === id) setAuthUser(null);
     if (editingId === id) setEditingId(null);
+
+    showToast("User deleted", "info");
   };
 
   const editUser = (user) => {
@@ -95,33 +100,32 @@ export default function UserManager() {
     setUsername(user.username);
     setRole(user.role);
     setPermissions(user.permissions || []);
-    setPassword(""); // leave blank for security
+    setPassword("");
   };
 
   return (
-    <div className="bg-white p-4 rounded shadow max-w-xl">
+    <div className="bg-white p-4 rounded shadow mb-6">
       <h2 className="text-xl font-bold mb-3">User Manager</h2>
 
-      {/* Add / Edit User Form */}
-      <div className="space-y-3 mb-4">
+      {/* Form */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4 flex-wrap">
         <input
           placeholder="Username"
-          className="border p-2 w-full"
+          className="border p-2 flex-1"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
         />
 
         <input
-          placeholder={
-            editingId ? "New Password (leave blank to keep)" : "Password"
-          }
-          className="border p-2 w-full"
+          placeholder={editingId ? "New Password (leave blank)" : "Password"}
+          type="password"
+          className="border p-2 flex-1"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
 
         <select
-          className="border p-2 w-full"
+          className="border p-2"
           value={role}
           onChange={(e) => setRole(e.target.value)}
         >
@@ -129,35 +133,35 @@ export default function UserManager() {
           <option value="admin">Admin</option>
         </select>
 
-        {/* Permissions */}
-        <div>
-          <p className="font-semibold mb-2">Module Access</p>
-          <div className="grid grid-cols-2 gap-2">
-            {ALL_PERMISSIONS.map((p) => (
-              <label key={p} className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={permissions.includes(p)}
-                  onChange={() => togglePermission(p)}
-                />
-                <span className="capitalize">{p}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
         <button
           onClick={addOrUpdateUser}
-          className={`w-full px-4 py-2 rounded text-white ${
+          className={`px-4 py-2 rounded text-white ${
             editingId ? "bg-yellow-600" : "bg-black"
           }`}
         >
-          {editingId ? "Update User" : "Add User"}
+          {editingId ? "Update" : "Add"}
         </button>
       </div>
 
+      {/* Permissions */}
+      <div className="mb-4">
+        <p className="font-semibold mb-2">Module Access</p>
+        <div className="grid grid-cols-2 gap-2">
+          {ALL_PERMISSIONS.map((p) => (
+            <label key={p} className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={permissions.includes(p)}
+                onChange={() => togglePermission(p)}
+              />
+              <span className="capitalize">{p}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
       {/* User List */}
-      <div className="space-y-2">
+      <div className="space-y-2 max-h-[300px] overflow-y-auto">
         {users.map((u) => (
           <div
             key={u.id}
