@@ -17,8 +17,19 @@ export default function MainLayout({ children }) {
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 bg-gray-100 p-3 md:p-4 overflow-auto">
-          {children}
+        <main
+          className="flex-1  md:p-4 overflow-auto relative"
+          style={{
+            backgroundImage: "url('/login-bg.jpg')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        >
+          {/* Overlay for better contrast */}
+          <div className="hidden md:block absolute inset-0 bg-black/10 pointer-events-none"></div>
+
+          {/* Actual content */}
+          <div className="relative z-10">{children}</div>
         </main>
       </div>
 

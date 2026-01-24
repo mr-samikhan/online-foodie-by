@@ -1,14 +1,18 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useConfirmStore } from "@/store/useConfirmStore";
+import { useEffect, useState } from "react";
 
 export default function OrderHistory() {
+  const { showConfirm } = useConfirmStore();
   const [orders, setOrders] = useState([]);
-  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null); // original
+  const [draftOrder, setDraftOrder] = useState(null); // editable copy
+
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Load orders from localStorage
+  /* ---------------- LOAD ORDERS ---------------- */
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem("orders")) || [];
     setOrders(saved);
@@ -19,235 +23,279 @@ export default function OrderHistory() {
     setOrders(updated);
   };
 
-  const deleteOrder = (id) => {
-    if (!confirm("Delete this order?")) return;
-    const updated = orders.filter((o) => o.id !== id);
-    saveOrders(updated);
-    if (selectedOrder?.id === id) setSelectedOrder(null);
+  /* ---------------- CALCULATE ORDER ---------------- */
+  const recalculateOrder = (order) => {
+    const subTotal = order.items.reduce((sum, i) => sum + i.qty * i.price, 0);
+
+    const taxPercent = order.taxPercent ?? 10;
+    const discount = order.discount ?? 0;
+    const serviceCharge = order.serviceCharge ?? 0;
+
+    const taxAmount = (subTotal * taxPercent) / 100;
+    const total = subTotal + taxAmount + serviceCharge - discount;
+
+    return {
+      ...order,
+      subTotal,
+      taxPercent,
+      taxAmount,
+      discount,
+      serviceCharge,
+      total,
+    };
   };
 
+  /* ---------------- DRAFT EDITING ---------------- */
   const updateItemQty = (itemName, qty) => {
-    if (!selectedOrder) return;
+    if (!draftOrder) return;
 
-    const updatedItems = selectedOrder.items.map((i) =>
+    const updatedItems = draftOrder.items.map((i) =>
       i.name === itemName ? { ...i, qty } : i
     );
 
-    const updatedTotal = updatedItems.reduce(
-      (sum, i) => sum + i.qty * i.price,
-      0
-    );
-
-    const updatedOrder = {
-      ...selectedOrder,
-      items: updatedItems,
-      total: updatedTotal,
-    };
-
-    const updatedOrders = orders.map((o) =>
-      o.id === selectedOrder.id ? updatedOrder : o
-    );
-
-    saveOrders(updatedOrders);
-    setSelectedOrder(updatedOrder);
+    setDraftOrder(recalculateOrder({ ...draftOrder, items: updatedItems }));
   };
 
   const deleteItem = (itemName) => {
-    if (!selectedOrder) return;
+    if (!draftOrder) return;
 
-    const updatedItems = selectedOrder.items.filter((i) => i.name !== itemName);
+    const updatedItems = draftOrder.items.filter((i) => i.name !== itemName);
 
-    const updatedTotal = updatedItems.reduce(
-      (sum, i) => sum + i.qty * i.price,
-      0
+    setDraftOrder(recalculateOrder({ ...draftOrder, items: updatedItems }));
+  };
+
+  const updateCharges = (field, value) => {
+    if (!draftOrder) return;
+
+    setDraftOrder(
+      recalculateOrder({
+        ...draftOrder,
+        [field]: Number(value),
+      })
     );
+  };
 
-    const updatedOrder = {
-      ...selectedOrder,
-      items: updatedItems,
-      total: updatedTotal,
-    };
-
+  /* ---------------- SAVE UPDATE ---------------- */
+  const updateInvoice = () => {
     const updatedOrders = orders.map((o) =>
-      o.id === selectedOrder.id ? updatedOrder : o
+      o.id === draftOrder.id ? draftOrder : o
     );
 
     saveOrders(updatedOrders);
-    setSelectedOrder(updatedOrder);
+    setSelectedOrder(draftOrder);
+    // alert("Invoice updated successfully");
   };
 
-  // Filter orders by date range
-  const dateFilteredOrders = orders.filter((o) => {
-    const orderDate = new Date(o.date);
-    const start = startDate ? new Date(startDate) : null;
-    const end = endDate ? new Date(endDate) : null;
+  /* ---------------- DELETE ORDER ---------------- */
+  const deleteOrder = (id) => {
+    // if (!confirm("Delete this order?")) return;
 
-    if (start && end) return orderDate >= start && orderDate <= end;
-    if (start) return orderDate >= start;
-    if (end) return orderDate <= end;
-    return true;
-  });
+    const updated = orders.filter((o) => o.id !== id);
+    saveOrders(updated);
 
-  // Filter further by search term (cashier name or item name)
-  const filteredOrders = dateFilteredOrders.filter((o) => {
-    const term = searchTerm.toLowerCase();
-    return (
-      o.cashier.toLowerCase().includes(term) ||
-      o.items.some((i) => i.name.toLowerCase().includes(term))
-    );
-  });
-
-  const totalFiltered = filteredOrders.reduce((sum, o) => sum + o.total, 0);
-
-  const clearFilter = () => {
-    setStartDate("");
-    setEndDate("");
-    setSearchTerm("");
+    if (draftOrder?.id === id) {
+      setDraftOrder(null);
+      setSelectedOrder(null);
+    }
   };
 
+  /* ---------------- FILTER ---------------- */
+  const filteredOrders = orders
+    .filter((o) => {
+      const d = new Date(o.date);
+      if (startDate && d < new Date(startDate)) return false;
+      if (endDate && d > new Date(endDate)) return false;
+      return true;
+    })
+    .filter((o) => {
+      const t = searchTerm.toLowerCase();
+      return (
+        o.cashier.toLowerCase().includes(t) ||
+        o.items.some((i) => i.name.toLowerCase().includes(t))
+      );
+    });
+
+  /* ---------------- UI ---------------- */
   return (
-    <div className="flex flex-col md:flex-row h-[calc(100vh-1rem)] gap-4 p-2 md:p-4">
-      {/* Order List */}
-      <div className="w-full md:w-1/2 flex flex-col border rounded-lg overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2 border-b flex-wrap">
+    <div className="flex flex-col md:flex-row h-screen gap-4 p-4 bg-slate-50">
+      {/* ORDER LIST */}
+      <div className="w-full md:w-1/2 border rounded-lg flex flex-col">
+        <div className="p-3 border-b space-y-2">
           <h2 className="text-xl font-bold">📋 Order History</h2>
 
-          <div className="flex gap-2 flex-wrap items-center">
+          <div className="flex gap-2 flex-wrap">
             <input
               type="date"
-              className="border rounded-lg p-2 text-sm"
+              className="border p-2 rounded"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              placeholder="Start Date"
             />
             <input
               type="date"
-              className="border rounded-lg p-2 text-sm"
+              className="border p-2 rounded"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              placeholder="End Date"
             />
             <input
               type="text"
-              className="border rounded-lg p-2 text-sm"
-              placeholder="Search by cashier or item..."
+              className="border p-2 rounded flex-1"
+              placeholder="Search..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-
-            {(startDate || endDate || searchTerm) && (
-              <button
-                onClick={clearFilter}
-                className="bg-gray-300 text-black px-3 py-1 rounded text-sm"
-              >
-                Clear Filter
-              </button>
-            )}
           </div>
         </div>
 
-        <p className="font-semibold p-2">
-          Total: <span className="text-green-600">Rs {totalFiltered}</span>
-        </p>
-
-        {/* Scrollable orders */}
         <div className="flex-1 overflow-y-auto p-2 space-y-2">
-          {filteredOrders.length === 0 && (
-            <p className="text-gray-400 text-center">No orders found.</p>
-          )}
-
           {filteredOrders.map((order) => (
             <div
               key={order.id}
-              className="p-3 bg-white rounded-lg shadow flex justify-between items-center border-l-4 border-green-600 cursor-pointer"
+              className="p-3 border rounded cursor-pointer flex justify-between"
+              onClick={() => {
+                const recalculated = recalculateOrder(order);
+                setSelectedOrder(recalculated);
+                setDraftOrder(recalculated);
+              }}
             >
-              <div onClick={() => setSelectedOrder(order)} className="flex-1">
+              <div>
                 <p className="font-semibold">Rs {order.total}</p>
-                <p className="text-xs text-gray-500">
-                  {new Date(order.date).toLocaleTimeString()}
+                <p className="text-sm font-semibold">{order.invoiceNo}</p>
+
+                <p className="text-xs">
+                  {new Date(order.date).toLocaleString()}
                 </p>
-                <p className="text-sm text-gray-600">{order.cashier}</p>
+                <p className="text-sm">{order.cashier}</p>
               </div>
 
               <button
-                onClick={() => deleteOrder(order.id)}
-                className="text-red-600 font-bold text-sm ml-2"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  showConfirm({
+                    title: "Delete",
+                    message: "Are you sure to delete this Order?",
+                    onConfirm: () => deleteOrder(order.id),
+                  });
+                }}
+                className="text-red-600"
               >
-                Delete
+                ✕
               </button>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Receipt */}
-      <div className="w-full md:w-1/2 bg-white rounded-lg shadow flex flex-col overflow-hidden">
-        {selectedOrder ? (
+      {/* RECEIPT */}
+      <div className="w-full md:w-1/2 bg-white border rounded-lg flex flex-col print-area">
+        {draftOrder ? (
           <>
-            <div className="p-4 border-b text-center">
-              <h3 className="text-lg font-bold">🍽️ My Restaurant</h3>
-              <p className="text-xs text-gray-500">
-                {new Date(selectedOrder.date).toLocaleString()}
+            <div className="text-center">
+              <h3 className="font-bold text-lg">🍽️ My Restaurant</h3>
+              <p className="text-xs">Invoice: {draftOrder.invoiceNo}</p>
+              <p className="text-xs">
+                {new Date(draftOrder.date).toLocaleString()}
               </p>
-              <p className="text-xs text-gray-500">
-                Cashier: {selectedOrder.cashier}
-              </p>
+              <p className="text-xs">Cashier: {draftOrder.cashier}</p>
             </div>
 
-            {/* Scrollable items */}
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {selectedOrder.items.map((item) => (
+              {draftOrder.items.map((item) => (
                 <div
                   key={item.name}
-                  className="flex justify-between items-center border-b pb-1 flex-wrap gap-2"
+                  className="flex justify-between border-b pb-1"
                 >
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm">{item.name}</span>
+                  <div className="flex gap-2 items-center">
+                    <span>{item.name}</span>
                     <button
                       onClick={() =>
                         updateItemQty(item.name, Math.max(1, item.qty - 1))
                       }
-                      className="px-2 bg-gray-200 rounded"
                     >
                       -
                     </button>
                     <span>{item.qty}</span>
                     <button
                       onClick={() => updateItemQty(item.name, item.qty + 1)}
-                      className="px-2 bg-gray-200 rounded"
                     >
                       +
                     </button>
                     <button
                       onClick={() => deleteItem(item.name)}
-                      className="px-2 bg-red-600 text-white rounded text-xs"
+                      className="text-red-600"
                     >
-                      Delete
+                      ✕
                     </button>
                   </div>
-
-                  <span className="font-semibold text-sm">
-                    Rs {item.price * item.qty}
-                  </span>
+                  <span>Rs {item.qty * item.price}</span>
                 </div>
               ))}
             </div>
 
-            <div className="p-4 border-t flex justify-between font-bold">
-              <span>Total</span>
-              <span className="text-green-600">Rs {selectedOrder.total}</span>
+            <div className="p-4 border-t space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Sub Total</span>
+                <span>Rs {draftOrder.subTotal}</span>
+              </div>
+
+              <div className="flex justify-between">
+                <span>Tax (10%)</span>
+                <span>Rs {draftOrder.taxAmount}</span>
+              </div>
+
+              <div className="flex justify-between">
+                <span>Service Charge</span>
+                <input
+                  type="number"
+                  className="border w-24 text-right"
+                  value={draftOrder.serviceCharge}
+                  onChange={(e) =>
+                    updateCharges("serviceCharge", e.target.value)
+                  }
+                />
+              </div>
+
+              <div className="flex justify-between">
+                <span>Discount</span>
+                <input
+                  type="number"
+                  className="border w-24 text-right"
+                  value={draftOrder.discount}
+                  onChange={(e) => updateCharges("discount", e.target.value)}
+                />
+              </div>
+
+              <div className="flex justify-between font-bold text-lg border-t pt-2">
+                <span>Total</span>
+                <span>Rs {draftOrder.total}</span>
+              </div>
             </div>
 
-            <button
-              onClick={() => window.print()}
-              className="bg-black text-white py-2 m-4 rounded-lg"
-            >
-              🖨️ Reprint Receipt
-            </button>
+            {/* ACTIONS */}
+            <div className="p-4 flex gap-2 no-print">
+              <button
+                onClick={() => {
+                  showConfirm({
+                    title: "Update Invoice",
+                    message: "Are you sure you want to update this Invoice?",
+                    onConfirm: () => updateInvoice(),
+                    type: "info",
+                  });
+                }}
+                className="bg-green-600 text-white px-4 py-2 rounded w-full"
+              >
+                ✅ Update Invoice
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="bg-black text-white px-4 py-2 rounded w-full"
+              >
+                🖨️ Print
+              </button>
+            </div>
           </>
         ) : (
-          <p className="text-gray-400 text-center mt-10">
-            Select an order to view details
+          <p className="text-center mt-20 text-gray-400">
+            Select an order to view
           </p>
         )}
       </div>

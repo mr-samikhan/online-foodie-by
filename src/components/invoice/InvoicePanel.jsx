@@ -1,60 +1,48 @@
-"use client";
 import { useInvoice } from "@/store/InvoiceContext";
 
 export default function InvoicePanel() {
-  const { items, increaseQty, decreaseQty, clearInvoice, completeOrder } =
-    useInvoice();
-
-  const total = items.reduce((sum, i) => sum + i.price * i.qty, 0);
+  const {
+    items,
+    increaseQty,
+    decreaseQty,
+    clearInvoice,
+    completeOrder,
+    subTotal,
+    taxPercent,
+    setTaxPercent,
+    taxAmount,
+    discount,
+    setDiscount,
+    serviceCharge,
+    setServiceCharge,
+    grandTotal,
+    showConfirm,
+  } = useInvoice();
 
   return (
-    <aside
-      className="
-        bg-white p-4 flex flex-col
-        h-auto md:h-full
-        max-h-[50vh] md:max-h-screen
-        md:w-[300px] w-full
-        shadow-md rounded-lg
-      "
-    >
-      {/* Header */}
-      <h2 className="font-bold mb-3 text-lg">🧾 Cart</h2>
+    <aside className="bg-white p-4 h-full flex flex-col">
+      <h2 className="font-bold mb-2 text-lg">🧾 Cart</h2>
 
-      {/* Items list scrollable */}
-      <div
-        className={`
-          flex-1 overflow-y-auto pr-1
-          ${items.length > 2 ? "max-h-[40vh] md:max-h-[calc(100vh-2rem)]" : ""}
-        `}
-      >
-        {items.length === 0 && (
-          <p className="text-gray-400 text-sm text-center mt-2">
-            No items added
-          </p>
-        )}
+      {/* Items */}
+      <div className="flex-1 overflow-y-auto space-y-2">
         {items.map((item) => (
-          <div
-            key={item.name}
-            className="flex justify-between items-center p-2 bg-gray-50 rounded mb-2"
-          >
+          <div key={item.name} className="flex justify-between items-center">
             <div>
-              <p className="font-semibold text-sm">{item.name}</p>
+              <p className="text-sm font-semibold">{item.name}</p>
               <p className="text-xs">Rs {item.price}</p>
             </div>
 
             <div className="flex items-center gap-2">
               <button
                 onClick={() => decreaseQty(item.name)}
-                className="px-2 py-1 bg-gray-200 rounded"
+                className="px-2 bg-gray-200 rounded"
               >
                 -
               </button>
-
-              <span className="text-sm">{item.qty}</span>
-
+              <span>{item.qty}</span>
               <button
                 onClick={() => increaseQty(item.name)}
-                className="px-2 py-1 bg-gray-200 rounded"
+                className="px-2 bg-gray-200 rounded"
               >
                 +
               </button>
@@ -63,26 +51,76 @@ export default function InvoicePanel() {
         ))}
       </div>
 
-      {/* Footer */}
-      <div className="border-t pt-3 mt-3 flex flex-col gap-2">
-        <p className="font-bold text-gray-800">Total: Rs {total}</p>
+      {/* Charges */}
+      <div className="border-t pt-3 space-y-2 text-sm">
+        <div className="flex justify-between">
+          <span>Sub Total</span>
+          <span>Rs {subTotal}</span>
+        </div>
+
+        <div className="flex justify-between items-center">
+          <span>Tax (%)</span>
+          <input
+            type="number"
+            className="border w-20 p-1 rounded text-right"
+            value={taxPercent}
+            onChange={(e) => setTaxPercent(+e.target.value)}
+          />
+        </div>
+
+        <div className="flex justify-between">
+          <span>Tax Amount</span>
+          <span>Rs {taxAmount.toFixed(2)}</span>
+        </div>
+
+        <div className="flex justify-between items-center">
+          <span>Service Charges</span>
+          <input
+            type="number"
+            className="border w-24 p-1 rounded text-right"
+            value={serviceCharge}
+            onChange={(e) => setServiceCharge(+e.target.value)}
+          />
+        </div>
+
+        <div className="flex justify-between items-center">
+          <span>Discount</span>
+          <input
+            type="number"
+            className="border w-24 p-1 rounded text-right"
+            value={discount}
+            onChange={(e) => setDiscount(+e.target.value)}
+          />
+        </div>
+
+        <div className="flex justify-between font-bold text-lg border-t pt-2">
+          <span>Total</span>
+          <span className="text-green-600">Rs {grandTotal.toFixed(2)}</span>
+        </div>
 
         <button
-          onClick={completeOrder}
+          onClick={() =>
+            showConfirm({
+              title: "Invoice Checkout",
+              message: "Are you sure to checkout?",
+              onConfirm: () => completeOrder(),
+              type: "info",
+            })
+          }
           className="w-full bg-green-600 text-white py-2 rounded"
         >
           Checkout
         </button>
 
         <button
-          onClick={() => window.print()}
-          className="w-full bg-blue-600 text-white py-2 rounded"
-        >
-          Print Receipt
-        </button>
-
-        <button
-          onClick={clearInvoice}
+          onClick={() =>
+            showConfirm({
+              title: "Clear Invoice",
+              message: "Are you sure to clear Invoice?",
+              onConfirm: () => clearInvoice(),
+            })
+          }
+          // onClick={clearInvoice}
           className="w-full bg-gray-300 py-2 rounded"
         >
           Clear

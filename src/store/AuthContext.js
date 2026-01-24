@@ -2,6 +2,7 @@
 import bcrypt from "bcryptjs";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useToastStore } from "@/store/ToastStore";
+import { useConfirmStore } from "./useConfirmStore";
 
 const AuthContext = createContext();
 
@@ -10,6 +11,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const { showToast } = useToastStore();
+  const { showConfirm } = useConfirmStore();
 
   const getStorage = (key) => {
     if (typeof window === "undefined") return null;
@@ -34,7 +36,7 @@ export function AuthProvider({ children }) {
           username: "admin",
           password: bcrypt.hashSync("1234", 10), // hashed password
           role: "admin",
-          permissions: ["dashboard", "services", "settings", "orders"],
+          permissions: ["dashboard", "services", "settings", "orders", "users"],
         },
         {
           id: "2",
@@ -83,13 +85,23 @@ export function AuthProvider({ children }) {
     return { success: true };
   };
 
+  const showConfirmPrompt = (title, message, fxn) => {
+    showConfirm({
+      title: title,
+      message: message,
+      onConfirm: fxn,
+    });
+  };
+
   const logout = () => {
     localStorage.removeItem("user");
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, setUser }}>
+    <AuthContext.Provider
+      value={{ user, login, logout, loading, setUser, showConfirmPrompt }}
+    >
       {children}
     </AuthContext.Provider>
   );

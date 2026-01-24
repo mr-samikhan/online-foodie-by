@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useAuth } from "@/store/AuthContext";
 
 export default function Header() {
-  const { user, logout } = useAuth();
+  const { user, logout, showConfirmPrompt } = useAuth();
   const [showModal, setShowModal] = useState(false);
 
   if (!user) return null; // safety
@@ -46,7 +46,13 @@ export default function Header() {
             </div>
 
             <button
-              onClick={logout}
+              onClick={() =>
+                showConfirmPrompt(
+                  "Logout",
+                  "Are you sure you want to logout?",
+                  logout
+                )
+              }
               className="w-full text-left px-4 py-2 hover:bg-gray-100"
             >
               Logout

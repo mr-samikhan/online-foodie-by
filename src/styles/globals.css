@@ -12,22 +12,19 @@ body {
     visibility: hidden;
   }
 
-  .receipt,
-  .receipt * {
+  .print-area,
+  .print-area * {
     visibility: visible;
   }
 
-  /* Hide buttons inside receipt */
-  .receipt button {
-    display: none !important;
-  }
-
-  .receipt {
+  .print-area {
     position: absolute;
     left: 0;
     top: 0;
-    width: 80mm;
-    padding: 10px;
-    font-size: 12px;
+    width: 100%;
+  }
+
+  button {
+    display: none !important;
   }
 }
